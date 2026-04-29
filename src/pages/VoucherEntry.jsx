@@ -21,7 +21,7 @@ const VoucherEntry = () => {
     remarks: '',
     narration: 'On Account',
     rows: [
-      { id: Date.now(), account: '', narration: 'On Account', amt: '', tdsApplicable: 'No', tdsType: '', type: 'Debit' }
+      { id: Date.now(), account: '', narration: 'On Account', amt: '', tds: '', type: 'Debit' }
     ]
   });
 
@@ -47,8 +47,7 @@ const VoucherEntry = () => {
         account: '', 
         narration: 'On Account', 
         amt: '', 
-        tdsApplicable: 'No', 
-        tdsType: '', 
+        tds: '', 
         type: formData.type === 'Payment' ? 'Debit' : 'Credit' 
       }]
     });
@@ -72,8 +71,15 @@ const VoucherEntry = () => {
     navigate('/');
   };
 
-  const dr = formData.rows.reduce((s, r) => s + (r.type === 'Debit' ? parseFloat(r.amt || 0) : 0), 0);
-  const cr = formData.rows.reduce((s, r) => s + (r.type === 'Credit' ? parseFloat(r.amt || 0) : 0), 0);
+  // Calculate net amount for each row
+  const calculateNet = (row) => {
+    const gross = parseFloat(row.amt || 0);
+    const tds = parseFloat(row.tds || 0);
+    return gross - tds;
+  };
+
+  const dr = formData.rows.reduce((s, r) => s + (r.type === 'Debit' ? calculateNet(r) : 0), 0);
+  const cr = formData.rows.reduce((s, r) => s + (r.type === 'Credit' ? calculateNet(r) : 0), 0);
 
   return (
     <Layout title={isEdit ? "Edit Voucher" : "Create Voucher"}>
@@ -178,8 +184,9 @@ const VoucherEntry = () => {
               <tr>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/4">Account Head</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Narration</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-32">Amount</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-48">TDS Info</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-32">Gross Amt</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-32">TDS Amt</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-32">Net Amt</th>
                 <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-24">Action</th>
               </tr>
             </thead>
@@ -193,12 +200,11 @@ const VoucherEntry = () => {
                       className="block w-full px-2 py-1.5 border border-gray-300 rounded text-sm focus:ring-indigo-500 focus:border-indigo-500" 
                       required
                     >
-                      <option value="">--Select--</option>
-                      <option value="CASH">CASH</option>
-                      <option value="BANK">BANK</option>
+                      <option value="">--Select head--</option>
                       <option value="OFFICE EXPENSES">OFFICE EXPENSES</option>
                       <option value="SALARY">SALARY</option>
                       <option value="RENT">RENT</option>
+                      <option value="CONSULTANCY">CONSULTANCY</option>
                     </select>
                   </td>
                   <td className="p-2">
@@ -221,29 +227,22 @@ const VoucherEntry = () => {
                     />
                   </td>
                   <td className="p-2">
-                    <div className="flex gap-2">
-                      <select 
-                        value={r.tdsApplicable} 
-                        onChange={(e) => handleRowChange(r.id, 'tdsApplicable', e.target.value)} 
-                        className="block w-20 px-1 py-1.5 border border-gray-300 rounded text-xs focus:ring-indigo-500 focus:border-indigo-500"
-                      >
-                        <option value="No">No</option>
-                        <option value="Yes">Yes</option>
-                      </select>
-                      {r.tdsApplicable === 'Yes' && (
-                        <select 
-                          value={r.tdsType} 
-                          onChange={(e) => handleRowChange(r.id, 'tdsType', e.target.value)} 
-                          className="block flex-1 px-1 py-1.5 border border-gray-300 rounded text-xs focus:ring-indigo-500 focus:border-indigo-500" 
-                          required
-                        >
-                          <option value="">--Type--</option>
-                          <option value="Rent">Rent (10%)</option>
-                          <option value="Professional">Prof. (10%)</option>
-                          <option value="Contract">Cont. (2%)</option>
-                        </select>
-                      )}
-                    </div>
+                    <input 
+                      type="number" 
+                      step="0.01" 
+                      value={r.tds} 
+                      onChange={(e) => handleRowChange(r.id, 'tds', e.target.value)} 
+                      className="block w-full px-2 py-1.5 border border-gray-300 rounded text-sm text-right focus:ring-indigo-500 focus:border-indigo-500" 
+                      placeholder="0.00"
+                    />
+                  </td>
+                  <td className="p-2">
+                    <input 
+                      type="text" 
+                      value={calculateNet(r).toFixed(2)} 
+                      readOnly 
+                      className="block w-full px-2 py-1.5 border border-transparent bg-gray-50 rounded text-sm text-right font-medium text-gray-700" 
+                    />
                   </td>
                   <td className="p-2 text-center">
                     <div className="flex justify-center space-x-1">

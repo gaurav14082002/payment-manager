@@ -49,9 +49,11 @@ const VoucherIndex = () => {
     let dr = 0;
     let cr = 0;
     voucher.rows.forEach(row => {
-      const amt = parseFloat(row.amt) || 0;
-      if (row.type === 'Debit') dr += amt;
-      else cr += amt;
+      const gross = parseFloat(row.amt || 0);
+      const tds = parseFloat(row.tds || 0);
+      const net = gross - tds;
+      if (row.type === 'Debit') dr += net;
+      else cr += net;
     });
     return { dr, cr };
   };
